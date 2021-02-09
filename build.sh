@@ -32,10 +32,16 @@ docker-compose -f create-certs.yml run --rm create_certs
 docker-compose up -d #--force
 
 echo
+echo "To setup the system users automatically inside the container:"
+echo "docker exec -it es01 bash"
+echo "elasticsearch-setup-passwords auto"
+echo "exit"
+echo
+
+echo
 echo "To execute bash inside the container:"
 echo "docker exec -it es01  bash"
 echo "docker exec -it kib01 bash"
-echo "exit"
 echo
 
 echo "Get logs:"
