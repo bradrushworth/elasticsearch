@@ -1,0 +1,5 @@
+data/
+certs/bundle.zip
+certs/ca/
+certs/es01/
+certs/kib01/

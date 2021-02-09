@@ -1,0 +1,87 @@
+version: '2.2'
+
+# 139.99.243.116
+# 139.99.243.117
+# 139.99.243.118
+# 139.99.243.119
+
+services:
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${VERSION}
+    container_name: es01
+    hostname: 'es01'
+    domainname: 'bitbot.com.au'
+    restart: 'always'
+    environment:
+      - node.name=es01
+      - cluster.name=${CLUSTER_NAME}
+      - discovery.type=single-node
+#      - cluster.initial_master_nodes=es01,es02,es03
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms4g -Xmx4g -Des.enforce.bootstrap.checks=true"
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
+      - xpack.license.self_generated.type=trial 
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=true 
+      - xpack.security.http.ssl.key=$CERTS_DIR/es01/es01.key
+      - xpack.security.http.ssl.certificate_authorities=$CERTS_DIR/ca/ca.crt
+      - xpack.security.http.ssl.certificate=$CERTS_DIR/es01/es01.crt
+      - xpack.security.transport.ssl.enabled=true 
+      - xpack.security.transport.ssl.verification_mode=certificate 
+      - xpack.security.transport.ssl.certificate_authorities=$CERTS_DIR/ca/ca.crt
+      - xpack.security.transport.ssl.certificate=$CERTS_DIR/es01/es01.crt
+      - xpack.security.transport.ssl.key=$CERTS_DIR/es01/es01.key
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
+    volumes: # Ensure these directories are using uid:gid 1000:0.
+      - ./data/:/usr/share/elasticsearch/data/
+      - ./config/es01.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+      - ./certs/:$CERTS_DIR
+    ports:
+      - ${IP_ADDRESS}:9200:9200 # Should this be private?
+      - ${IP_ADDRESS}:9300:9300
+    networks:
+      - elastic
+    healthcheck:
+      test: curl --cacert $CERTS_DIR/ca/ca.crt -s https://localhost:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  kib01:
+    image: docker.elastic.co/kibana/kibana:${VERSION}
+    container_name: kib01
+    depends_on: {"es01": {"condition": "service_healthy"}}
+    hostname: 'kib01'
+    domainname: 'bitbot.com.au'
+    restart: 'always'
+    ports:
+      - ${IP_ADDRESS}:5601:5601
+    environment:
+      SERVERNAME: kibana.bitbot.net.au
+      ELASTICSEARCH_URL: https://es01:9200
+      ELASTICSEARCH_HOSTS: https://es01:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: MYSECRET
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: $CERTS_DIR/ca/ca.crt
+      SERVER_SSL_ENABLED: "true"
+      SERVER_SSL_KEY: $CERTS_DIR/kib01/kib01.key
+      SERVER_SSL_CERTIFICATE: $CERTS_DIR/kib01/kib01.crt
+    volumes:
+      - ./config/kibana.yml:/usr/share/kibana/config/kibana.yml
+      - ./certs/:$CERTS_DIR
+    networks:
+      - elastic
+
+networks:
+  elastic:
+    driver: bridge
+
