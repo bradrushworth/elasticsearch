@@ -1,10 +1,5 @@
 version: '2.2'
 
-# 139.99.243.116
-# 139.99.243.117
-# 139.99.243.118
-# 139.99.243.119
-
 services:
   es01:
     image: docker.elastic.co/elasticsearch/elasticsearch:${VERSION}
@@ -14,11 +9,18 @@ services:
     restart: 'always'
     environment:
       - node.name=es01
+      - network.host=es01
       - cluster.name=${CLUSTER_NAME}
       - discovery.type=single-node
+#      - discovery.seed_hosts=es02,es03
 #      - cluster.initial_master_nodes=es01,es02,es03
       - bootstrap.memory_lock=true
+      - node.master=true
+      - node.data=true
+      - node.ingest=true
+      - node.ml=false # Machine Learning
       - "ES_JAVA_OPTS=-Xms4g -Xmx4g -Des.enforce.bootstrap.checks=true"
+      - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - KEYSTORE_PASSWORD=${KEYSTORE_PASSWORD}
       - xpack.license.self_generated.type=trial 
@@ -32,6 +34,10 @@ services:
       - xpack.security.transport.ssl.certificate_authorities=$CERTS_DIR/ca/ca.crt
       - xpack.security.transport.ssl.certificate=$CERTS_DIR/es01/es01.crt
       - xpack.security.transport.ssl.key=$CERTS_DIR/es01/es01.key
+      - xpack.monitoring.enabled=true
+      - xpack.monitoring.collection.enabled=true
+      - http.cors.enabled=true
+      - http.cors.allow-origin=*
     ulimits:
       memlock:
         soft: -1
@@ -48,10 +54,13 @@ services:
     ports:
       - ${IP_ADDRESS}:9200:9200 # Should this be private?
       - ${IP_ADDRESS}:9300:9300
+#    expose:
+#      - 9200
+#      - 9300
     networks:
       - elastic
     healthcheck:
-      test: curl --cacert $CERTS_DIR/ca/ca.crt -s https://localhost:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      test: curl --cacert $CERTS_DIR/ca/ca.crt -s https://es01:9200 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
       interval: 30s
       timeout: 10s
       retries: 5
@@ -70,16 +79,24 @@ services:
       ELASTICSEARCH_URL: https://es01:9200
       ELASTICSEARCH_HOSTS: https://es01:9200
       ELASTICSEARCH_USERNAME: kibana_system
-      ELASTICSEARCH_PASSWORD: MYSECRET
+      ELASTICSEARCH_PASSWORD: ${ELASTIC_PASSWORD}
       ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: $CERTS_DIR/ca/ca.crt
       SERVER_SSL_ENABLED: "true"
       SERVER_SSL_KEY: $CERTS_DIR/kib01/kib01.key
       SERVER_SSL_CERTIFICATE: $CERTS_DIR/kib01/kib01.crt
+      XPACK_MONITORING_ENABLED: "true"
+      XPACK_MONITORING_COLLECTION_ENABLED: "true"
+      XPACK_SECURITY_ENABLED: "true"
     volumes:
       - ./config/kibana.yml:/usr/share/kibana/config/kibana.yml
       - ./certs/:$CERTS_DIR
     networks:
       - elastic
+    healthcheck:
+      test: curl --cacert $CERTS_DIR/ca/ca.crt -s https://kib01:5601 >/dev/null; if [[ $$? == 52 ]]; then echo 0; else echo 1; fi
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 networks:
   elastic:

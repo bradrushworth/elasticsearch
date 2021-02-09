@@ -2,9 +2,11 @@ instances:
   - name: es01
     dns:
       - es01
+      - kibana.bitbot.net.au
       - localhost
     ip:
       - 127.0.0.1
+      - 172.20.0.2
 
   - name: kib01
     dns:
@@ -12,5 +14,7 @@ instances:
       - kibana.bitbot.net.au
       - localhost
     ip:
+      - 127.0.0.1
+      - 172.20.0.3
       - 139.99.243.119
 

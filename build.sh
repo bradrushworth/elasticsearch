@@ -25,7 +25,7 @@ echo
 
 #docker build -t bitbot/mariadb mariadb --rm #--no-cache
 
-docker-compose pull
+#docker-compose pull
 
 docker-compose -f create-certs.yml run --rm create_certs
 
@@ -33,6 +33,7 @@ docker-compose up -d #--force
 
 echo
 echo "To execute bash inside the container:"
+echo "docker exec -it es01  bash"
 echo "docker exec -it kib01 bash"
 echo "exit"
 echo
